@@ -1,0 +1,699 @@
+---
+title: "Analysis of Spatio-Temporal Data - Final Assignment WS 2018/19"
+
+author: "Rubankumar Moorthy"
+date: "10 march 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Title
+###Individual tree detection and ground based stastical approach for forestry application using LiDAR derived Rasters
+
+
+##Introduction
+Lidar (also called LIDAR, LiDAR, and LADAR) is a surveying method that measures distance to a target by illuminating the target with pulsed laser light and measuring the reflected pulses with a sensor. Differences in laser return times and wavelengths can then be used to make digital 3-D representations of the target.In this project,focus on the Lidar acquired raster datsets.LiDAR individual tree detection (ITD) is a interactive method for measuring forest areas at a scale that is meaningful ecologically and useful for forest managers.The main objective of this Project,to find individual tree detection based on DSM,DTM and utilize raster canopy height models from the lidar is handling of tree crowns of different sizes.However,Delination of ITD has high accuracy for trees that are visible from above but does not reliably detect trees in lower canopy strata.ITD is more accurate for upper-canopy trees is useful, there is alack of practical understanding of how ITD results might vary with changes in structure.In this scenerio, i have tried to apply LiDAR derived raster to produced high resolution low altitude trees, which useful to identify the abandoned and lower canopy.Furthermore to compare with the ITD derived from the CHM ,based on temporal data analysis.It useful for identify the trees properties monitoring, visualisation and analysis of Forest Geographical information Management.we also dicuss the ground truth data validation compare with Lidar derived information, using counts of tree. 
+
+##Data set(s) used:
+Remote sensing data were collected from National Ecological Observatory Network's (NEON).
+LiDAR derived imagery data about San Joaquin field site located in California,USA and year of 2011&2013.
+
+###About Dataset:
+- San Joaquin field site,LiDAR derived DSM and DTM
+- Ground Truth statistical Data
+- Time series : 2011 and 2013
+
+
+
+##Methodology
+
+*Canopy Height Model: (canopy calculation function)
+   It represents the heights of the trees on the ground.Digital Surface Model (DSM), Digital Elevation Models (DEM) and the Canopy Height Model (CHM) are the most common raster format lidar derived data products. One way to derive a CHM is to take the difference between the digital surface model (DSM, tops of trees, buildings and other objects) and the Digital Terrain Model (DTM, ground level). The CHM represents the actual height of trees, buildings,
+  
+*Tree Detection : (using rLiDAR)
+    Detects and computes the location and height of individual trees within the lidar-derived Canopy Height Model (CHM).With the help of "rLiDAR" algorithm, implemented  and derived the individual tree location.
+
+*Analysis between Temporal Data and 3D Trees Stand Visulisation :
+    After Prediction of individual Tree Detection,now able to visualize and interperates the tree location with respect to height.3D stand visulisation is the one of best way of virtual undersatnding to the user.
+
+
+*Ground Truth Validation:
+    In remote sensing, "ground truth" refers to information collected on location. Ground truth allows image data to be related to real features and materials on the ground. The collection of ground-truth data enables calibration of remote-sensing data, and aids in the interpretation and analysis of what is being sensed.In this project to validates the information of trees from ground based collected data and Lidar derived information. 
+
+
+####Required libraries:
+
+
+```{r}
+library(sp)
+library(raster)
+library("rLiDAR")
+library(rgl)
+library(dplyr)
+library(rgdal)
+library(scatterplot3d)
+library(plot3D)
+library(Metrics)
+library(plotrix)
+
+
+
+```
+
+
+
+##Import the  raster dataset were collected San Joaquin field site located in California,2013.
+Methods to create a RasterLayer object. RasterLayer objects can be created from scratch, a file, an Extent object, a matrix, an 'image' object, or from a Raster*, Spatial*, im (spatstat) asc, kasc (adehabitat*), grf (geoR) or kde object.
+
+In many cases, e.g. when a RasterLayer is created from a file, it does (initially) not contain any cell (pixel) values in (RAM) memory, it only has the parameters that describe the RasterLayer. You can access cell-values with getValues, extract and related functions. You can assign new values with setValues and with replacement.
+
+
+```{r}
+DSM_2013 <- raster("SJER2013_DSM.tif")
+DTM_2013 <- raster("SJER2013_DTM.tif")
+
+```
+####Terms
+#####DSM: It represents the elevation of the tallest surfaces at that point
+#####DTM: It represents the elevation of the ground
+
+###Attribute information of DTM and DSM-2013.
+In this dataset which derived from the lidar with high resolution(1m),which provide  the more accurate informtion of the study Area.In this Project consider the spatial extent of (255693, 257698, 4109511, 4111689) Easting, Northing based on UTM and Zone 11 .The Universal Transverse Mercator conformal projection uses a 2-dimensional Cartesian coordinate system to give locations on the surface of the Earth. The World Geodetic System 1984 (WGS84) is a datum featuring coordinates that change with time. WGS84 is defined and maintained by the United States National Geospatial-Intelligence Agency (NGA). 
+
+```{r}
+DSM_2013
+DTM_2013
+```
+
+
+###Plotting  DSM and DTM from cloud points.
+
+The terms easting and northing are geographic Cartesian coordinates for a point. Easting refers to the eastward-measured distance (or the x-coordinate), while northing refers to the northward-measured distance (or the y-coordinate)
+
+```{r}
+plot(DSM_2013, main="LiDAR Digital Surface Model in meter- 2013 \n SJER, California",xlab = "Easting(in m)", ylab = "Northing(in m)")
+```
+
+
+```{r}
+plot(DTM_2013, main="LiDAR Digital Terrain Model in meter- 2013 \n SJER, California",xlab = "Easting(in m)", ylab = "Northing(in m)")
+```
+
+###creating Canopy Height model(CHM) 2013.
+The LiDAR-derived Canopy height model (CHM), due to its wide applications in forestry, is important for foresters. Before a CHM can be considered a valuable, objective source of information about a canopy surface, it must be properly interpolated and preprocessed, which may sometimes be challenging, especially in case of multilayer and multispecies forest.
+
+```{r}
+CHM_2013 <- DSM_2013-DTM_2013
+```
+
+```{r}
+CHM_2013
+```
+
+#### Canopy Height Model
+```{r}
+plot(CHM_2013, main="Canopy Height Model (in m) for 2013  \n SJER, California",xlab = "Easting(in m)", ylab = "Northing(in m)")
+
+```
+
+#####other method to CHM,creating a function (optional)
+It is a another version of Canopy Height Model,using method of function. That is the another way of subtraction between DSM and DTM. I have considered gerneral conventional method for derive a canopy height model.  
+
+```{r}
+canopyCalc <- function(DSM_2013, DTM_2013) {
+  return(DSM_2013 - DTM_2013)
+  }
+```
+
+#####Canopy height model version.2 by using function
+```{r}
+chmv2_2013 <- canopyCalc(DSM_2013,DTM_2013)
+chmv2_2013
+```
+
+```{r}
+plot(chmv2_2013, main="Canopy Height Model (in m) for 2013 ver.2 \n SJER, California",xlab = "Easting(in m)", ylab = "Northing(in m)")
+
+```
+
+###Smoothing the CHM 2013:
+
+This study tested and evaluated the impact of CHM ITD methods on the accuracy of estimating tree height, which is one of the most important trees and stands feature. Tree heights calculated from 5.5m CHMs and using fixed window size,minimum threshold,CHM smoothing  were compared to heights measurements in the field. It was also tested whether applying and setting fixed squre window,minimum height threshold can improve the accuracy of tree height estimations based on LiDAR-derived CHMs.
+ 
+```{r}
+
+schm_2013<-CHMsmoothing(CHM_2013 , "mean", 5)
+```
+ 
+#####setting fixed squre window
+
+```{r}
+fws<-9 
+```
+
+#####settting minimum height threshold for trees
+
+```{r}
+minht<-5.5
+```
+
+#####individual tree detection 
+
+```{r}
+TreeList_2013<-FindTreesCHM(schm_2013, fws, minht)
+```
+
+```{r}
+
+summary(TreeList_2013)
+```
+
+###Plotting the individual tree location on the CHM 2013.
+The obtained results indicate that the method of generating CHMs influences the accuracy of tree height estimations.The mean differences between the means of field heights and LiDAR-derived heights (for each CHM separately and the 99th percentile) were statistically significant. The most accurate results were obtained from the Canopy height model.
+
+
+```{r}
+plot(CHM_2013, main="Individual Trees location (in m)-2013 from LiDAR-derived CHM",xlab = "Easting(in m)", ylab = " Northing(in m)")  
+XY_2013<-SpatialPoints(TreeList_2013[,1:2])  
+plot(XY_2013, add=TRUE, col="green", pch=16,cex=0.5) 
+```
+
+
+###Simple plotting the Tree Location using Scatter 3D
+for creating 3D graphics, which represents the individual tree location with respect to the height.From this graph we can interpretes the individual tree information and properties.It is simple and non tree shape dimensional graph for basic undersatnding Tree height interval with respect to exact tree location derived from CHM smoothing 2013.
+
+
+
+```{r}
+X<-TreeList_2013$x
+Y <-TreeList_2013$y
+Z <-TreeList_2013$height
+  
+  
+```
+
+
+
+```{r}
+scatter3D(X,Y,Z,phi = 0.5, bty = "g",  type = "h", ticktype = "detailed", pch = 15, cex = 0.5, main="Plotting derived Tress in 2013",xlab = "Easting(in m)", ylab = " Northing(in m)",zlab="Elevation(in m)", clab = c("Tree", "Elevation (in Meter)"),breaks=c(0, 5, 10, 15, 21, 25,30))
+```
+
+
+
+###Individual Tree Counts for the year of 2013.
+The use of canopy height model smoothing improved the accuracy of tree height and count estimations from LiDAR data (especially for the CHMs filtered with fixed square window).In the year of 2013, almost predicted 220 different species tree with information of exact location, height.
+
+
+```{r}
+summary(XY_2013)
+
+```
+
+
+
+##Import the  raster dataset were collected San Joaquin field site located in California,2011.
+The same conventional procedure followed by 2011 as same study area in differnt temporal datasets, lidar based raster model namely DSM,DTM can be processed to delination of individual tree detection.
+
+
+```{r}
+
+DSM_2011 <- raster("SJER2011_DSM.tif")
+DTM_2011 <- raster("SJER2011_DTM.tif")
+
+```
+
+###Attribute information of DTM and DSM-2011.
+In this dataset which similar to 2013, from the lidar with high resolution(1m),which provide the same study Area.Also consider the spatial extent of (255693, 257698, 4109511, 4111689) Easting, Northing based on UTM and zone 11.The World Geodetic System 1984 (WGS84) is a datum featuring coordinates DSM and DTM.
+
+
+```{r}
+
+DSM_2011
+DTM_2011
+
+
+```
+
+###Plotting  DSM and DTM from cloud points 2011.
+
+
+```{r}
+
+plot(DSM_2011, main="LiDAR Digital Surface Model (in m) 2011 \n SJER, California",xlab = "Easting(in m)", ylab = "Northing(in m)")
+plot(DTM_2011, main="LiDAR Digital Terrain Model (in m) 2011 \n SJER, California",xlab = "Easting(in m)", ylab = "Northing(in m)")
+```
+
+###creating Canopy Height model(CHM) 2011.
+Based on digital surface model and digital terrain model,CHM can be derived. Which is similary to the method of 2013. 
+
+```{r}
+CHM_2011 <- DSM_2011-DTM_2011
+plot(CHM_2011,main="Canopy Height Model (in m) for 2011  \n SJER, California",xlab = "Easting(in m)", ylab = "Northing(in m)")
+```
+
+
+
+
+
+###Smoothing the CHM 2011:
+For smoothing the CHM , apply the same values of setting fixed squre window,minimum threshold for trees.Mean while we consider the same area extent only the different time period.
+
+
+#####Smoothing  CHM
+ 
+```{r}
+
+schm_2011<-CHMsmoothing(CHM_2011 , "mean", 5)
+```
+ 
+#####setting fixed squre window
+
+```{r}
+fws1<-9 
+```
+
+#####settting minimum height threshold for trees
+
+```{r}
+minht1<-5.5
+```
+
+#####individual tree detection 
+
+```{r}
+TreeList_2011<-FindTreesCHM(schm_2011, fws1, minht1)
+```
+
+```{r}
+
+summary(TreeList_2011)
+```
+
+
+##Plotting the individual tree location on the CHM 2011:
+The obtained results indicate that the method of generating CHMs influences the accuracy of tree height estimations in 2011. which consist of loaction and height of the tree attributes.
+
+
+```{r}
+plot(CHM_2011, main="individual trees from LiDAR-derived CHM-2011",xlab = "Easting(in m)", ylab = " Northing(in m)")  
+XY_2011<-SpatialPoints(TreeList_2011[,1:2])  
+plot(XY_2011, add=TRUE, col="red", pch=16,cex=0.5) 
+```
+
+##plotting trees 2011:
+From this graph we can interpretes the individual tree information and properties.It is simple and non tree shape dimensional graph for basic undersatnding Tree height interval with respect to exact tree location derived from CHM smoothing 2011.
+
+```{r}
+X1<-TreeList_2011$x
+Y1 <-TreeList_2011$y 
+Z1 <-TreeList_2011$height
+scatter3D(X1,Y1,Z1,phi = 0.5, bty = "g",  type = "h", ticktype = "detailed", pch = 15, cex = 0.5, main="Plotting derived Tress in 2011",xlab = "Easting(in m)", ylab = " Northing(in m)",zlab="Elevation(in m)", clab = c("Tree", "Elevation (in Meter)"),breaks=c(0, 5, 10, 15, 21, 25,30))
+  
+```
+
+
+###Individual Tree Counts for the year of 2011.
+The use of canopy height model smoothing improved the accuracy of tree height and count estimations from LiDAR data (especially for the CHMs filtered with fixed square window).In the year of 2011, almost predicted 220 different species tree with information of exact location, height which similar to the 2013 Tree counts.There is no changes in the count of trees and only height might be varies from the above two temporal results.
+
+
+
+```{r}
+summary(XY_2011)
+```
+
+
+
+
+##Analysis of the Canopy Height model derived Tress and Temporal data:
+
+###compare between 2011 and 2013 canopy Height model using Histogram
+
+Histograms are based on estimating a local density; in their case, points are local to each other if they fall into the same bin. However, bins are a rather inflexible way of implementing local density estimation.while differentiation two year CHM histogram, there is no changes in elevation.basically very rare to change change between two temporal year.However,CHM histogram proves the result of the tree count.The frequency of the CHM_2013 and CHM_2011 which is almost same values.In this case, i have considered ground truth data for validation of the tree counts. 
+
+```{r}
+CHM_2013hist<-hist(CHM_2013,
+     breaks=6,
+     main="Histogram Canopy Height Model-2013\n  SJER, California",
+     col="Green",
+     xlab= "Elevation (m)" ) 
+```
+
+
+
+
+
+```{r}
+CHM_2011hist<-hist(CHM_2011,
+     breaks=6,
+     main="Histogram Canopy Height Model-2011\n  SJER, California",
+     col="Red",
+     xlab= "Elevation (m)" ) 
+
+```
+
+
+##Tree Count comparison with 3D Stand Visulisation
+
+while calculating the tree difference 2011 and 2013,which was none differnce number of tree identified. The summary results of 2013 treeslist has 220 points reflects,which represents the no.of individual tree points. At the same time , 2011 data similar to 2013 tree counts.In 2011, the number of trees calculated using smoothing canopy height model and fixed window and minimum height.
+
+
+###The decision for a 3D visualisation has a very simple reason: 
+The classical technical  two-dimensional data, polygons or models only represents two dimension. Unfortunately, few people not have a perfectly distinct spatial imagination. The attempt to depict a spatial model to these people by means of a two-dimensional representation is a real challenge. This is where 3D visualization comes in. It helps people with less pronounced imagination to better imagine three-dimensional objects. A big advantage of this is that the 3D models can be individually customized, by mapping components or objects transparently or as a section cut.In future much useful for Storing ,analyzing,retriving, updating various kind of geospatial data.
+
+
+
+
+###2011 -Tree Visulisation:
+For 3d stand representation of trees consider the number of trees, mean and standard deviation of tree height,tree location. In this visulisation trees displayed virtually with help of cone,ellipsoid,halfellipsoid,paraboloid.The Tress are plotted in the 3D plane, for each tree consist of individual height.
+
+
+```{r}
+summary(XY_2011)
+
+```
+##### Set the No.of.trees
+
+```{r}
+Ntrees<-220
+
+```
+
+##### Set the tree locations
+
+
+
+```{r}
+XYgrid1<-cbind(X1,Y1)
+# plot the location of the trees
+
+plot(XYgrid1, main="Tree location-2011",xlab = "Easting(in m)", ylab = " Northing(in m)")
+```
+
+
+```{r}
+meanHCB<-16.127 # mean of the height at canopy base
+sdHCB<-	6.5533320888436 # standard deviation of the height at canopy base
+HCB<-rnorm(Ntrees, mean=meanHCB, sd=sdHCB) # height at canopy base
+crownshape<-sample(c("cone", "ellipsoid","halfellipsoid", "paraboloid"), Ntrees, replace=TRUE) # tree crown shape
+```
+
+
+```{r}
+CL<-HCB*1.3 # tree crown lenght
+CW<-HCB # tree crown width
+```
+
+##### Plot tree height based on the HCB quantiles
+
+```{r}
+HCBq<-quantile(HCB) # HCB quantiles
+crowncolor<-NA*(1:Ntrees) # set an empty crowncolor vector
+```
+
+##### classify trees by HCB quantile
+
+```{r}
+for (i in 1:Ntrees){
+if (HCB[i] <= HCBq[2]) {crowncolor[i]<-"red"} # group 1
+if (HCB[i] > HCBq[2] & HCB[i] <= HCBq[3] ) {crowncolor[i]<-"blue"} # group 2
+if (HCB[i] > HCBq[3] & HCB[i] <= HCBq[4] ) {crowncolor[i]<-"yellow"} # group 3
+if (HCB[i] >= HCBq[4]) {crowncolor[i]<-"dark green"} # group 4
+}
+```
+
+
+
+#####plotting Tree stand
+
+```{r}
+open3d() # open a rgl window
+# Plot stand
+for(i in 1:Ntrees){
+LiDARForestStand(crownshape = crownshape[i], CL = CL[i], CW = CW[i],
+HCB = HCB[i], X = as.numeric(XYgrid1[i,1]), Y = as.numeric(XYgrid1[i,2]), dbh = 0.4, crowncolor = crowncolor[i],stemcolor = "chocolate4", resolution="high", mesh=TRUE)
+}
+
+axes3d(c("x-", "x-", "y-", "z"), col="gray") # axes
+title3d(main="3D Tree Visulisation-2011",xlab = "Easting(in m)", ylab = "Northing(in m)", zlab = "Tree Height", col="red") # title
+planes3d(0, 0, -1, 0.001, col="gray", alpha=0.7) # set a terrain plane
+```
+
+
+
+
+###2013 -Tree Visulisation
+Plot different tree height in the stand using different crown colors in to the three dimensional plane. which  is applied the the values of the trees count,mean and std dev of height of the tree in 2013. The 3D disply represents the individual tress with respect ot the height.while compare between 2011 and 2013 CHM based trees have similar counts of tree and only small varies in the heights.  
+
+
+```{r}
+summary(XY_2013)
+
+```
+
+
+##### Set the number of trees
+
+```{r}
+Ntrees<-220
+
+```
+
+##### Set the tree locations
+
+
+
+```{r}
+XYgrid<-cbind(X,Y)
+# plot the location of the trees
+
+plot(XYgrid, main="Tree location-2013",xlab = "Easting(in m)", ylab = " Northing(in m)")
+```
+
+
+```{r}
+meanHCB<-16.127 # mean of the height at canopy base
+sdHCB<-	6.5533320888436 # standard deviation of the height at canopy base
+HCB<-rnorm(Ntrees, mean=meanHCB, sd=sdHCB) # height at canopy base
+crownshape<-sample(c("cone", "ellipsoid","halfellipsoid", "paraboloid"), Ntrees, replace=TRUE) # tree crown shape
+```
+
+
+```{r}
+CL<-HCB*1.3 # tree crown lenght
+CW<-HCB # tree crown width
+```
+
+##### Plot tree height based on the HCB quantiles
+
+```{r}
+HCBq<-quantile(HCB) # HCB quantiles
+crowncolor<-NA*(1:Ntrees) # set an empty crowncolor vector
+```
+
+##### classify trees by HCB quantile
+
+```{r}
+for (i in 1:Ntrees){
+if (HCB[i] <= HCBq[2]) {crowncolor[i]<-"red"} # group 1
+if (HCB[i] > HCBq[2] & HCB[i] <= HCBq[3] ) {crowncolor[i]<-"blue"} # group 2
+if (HCB[i] > HCBq[3] & HCB[i] <= HCBq[4] ) {crowncolor[i]<-"yellow"} # group 3
+if (HCB[i] >= HCBq[4]) {crowncolor[i]<-"dark green"} # group 4
+}
+```
+
+
+
+#####plotting Tree stand
+
+```{r}
+open3d() # open a rgl window
+# Plot stand
+for(i in 1:Ntrees){
+LiDARForestStand(crownshape = crownshape[i], CL = CL[i], CW = CW[i],
+HCB = HCB[i], X = as.numeric(XYgrid[i,1]), Y = as.numeric(XYgrid[i,2]), dbh = 0.4, crowncolor = crowncolor[i],stemcolor = "chocolate4", resolution="high", mesh=TRUE)
+}
+
+axes3d(c("x-", "x-", "y-", "z"), col="gray") # axes
+title3d(main="3D Tree Visulisation-2013",xlab = "Easting(in m)", ylab = "Northing(in m)", zlab = "Tree Height", col="red") # title
+planes3d(0, 0, -1, 0.001, col="gray", alpha=0.7) # set a terrain plane
+```
+
+
+
+
+
+##Validation with ground based statistical data 2013 & Lidar derived data 2013:
+For the validation, i have considered 2013 ground Truth statical data for measures the individual Tree properties.The main reason,Ground Truth data which provide more sense and accurate and also best way of validate the machine learning. secondary reason 2013 and 2011 produced the same results,in this scenario considerd 2013 for further validation.
+
+###Read the Ground Truth data
+
+```{r}
+grounddata <-read.csv("GroundTruthData_2013.csv", header = TRUE )
+summary(grounddata)
+
+```
+
+###Plot the GTD using simple Scatter 3D
+Ground Truth data conist of almost 236 tress with differnt species and each tree location with respect to the height information. It is much useful for validating the CHM derived Trees in 2013.
+
+```{r}
+X2<-grounddata$ easting
+Y2 <-grounddata$northing
+Z2 <-grounddata$ maxcanopyd
+scatter3D(X2,Y2,Z2,phi = 0.5, bty = "g",  type = "h", ticktype = "detailed", pch = 15, cex = 0.5, main="Plotting Tress in 2013-Ground truth data",xlab = "Easting(in m)", ylab = " Northing(in m)",zlab="Elevation(in m)", clab = c("Tree", "Elevation (in Meter)"),breaks=c(0, 5, 10, 15, 21, 25,30))
+```
+
+
+###Plot the Ground truth Tree location into CHM-2013
+we can now see the exact location of the tress from the ground field data.It is plotted with repect to the location of the trees. 
+
+```{r}
+plot(CHM_2013,axes=T,asp=1, main="individual trees from Ground Truth Data-2013",xlab = "Easting(in m)", ylab = " Northing(in m)")
+x = data.frame(grounddata$ easting,grounddata$northing)
+#change the data into a SpatialPointsDataFrame
+ground.points <- SpatialPointsDataFrame(x, grounddata)
+class(ground.points)
+plot(ground.points,add=T,col='red1', pch = 5, cex = 1)
+
+```
+
+
+
+
+###visualisation  of Ground Truth data 2013 in 3D environment
+In this case consider the number of trees form the ground truth data and mean,std.dev of height,individual tree location.Almost 236 tress considerd from land surveyed data.
+
+
+```{r}
+Ntrees<-236
+
+```
+
+```{r}
+XYgrid2<-cbind(X2,Y2)
+# plot the location of the trees
+
+plot(XYgrid2, main="Tree location Ground Truth data-2013",xlab = "Easting(in m)", ylab = " Northing(in m)")
+```
+
+```{r}
+meanHCB<- 5.504 # mean of the height at canopy base
+sdHCB<-	7.6058374073252 # standard deviation of the height at canopy base
+HCB<-rnorm(Ntrees, mean=meanHCB, sd=sdHCB) # height at canopy base
+crownshape<-sample(c("cone", "ellipsoid","halfellipsoid", "paraboloid"), Ntrees, replace=TRUE) # tree crown shape
+```
+
+
+```{r}
+CL<-HCB*1.3 # tree crown lenght
+CW<-HCB # tree crown width
+```
+
+##### Plot tree height based on the HCB quantiles
+
+```{r}
+HCBq<-quantile(HCB) # HCB quantiles
+crowncolor<-NA*(1:Ntrees) # set an empty crowncolor vector
+```
+
+##### classify trees by HCB quantile
+
+```{r}
+for (i in 1:Ntrees){
+if (HCB[i] <= HCBq[2]) {crowncolor[i]<-"red"} # group 1
+if (HCB[i] > HCBq[2] & HCB[i] <= HCBq[3] ) {crowncolor[i]<-"blue"} # group 2
+if (HCB[i] > HCBq[3] & HCB[i] <= HCBq[4] ) {crowncolor[i]<-"yellow"} # group 3
+if (HCB[i] >= HCBq[4]) {crowncolor[i]<-"dark green"} # group 4
+}
+```
+
+
+
+#####plotting Tree stand
+
+```{r}
+open3d() # open a rgl window
+# Plot stand
+for(i in 1:Ntrees){
+LiDARForestStand(crownshape = crownshape[i], CL = CL[i], CW = CW[i],
+HCB = HCB[i], X = as.numeric(XYgrid2[i,1]), Y = as.numeric(XYgrid2[i,2]), dbh = 0.4, crowncolor = crowncolor[i],stemcolor = "chocolate4", resolution="high", mesh=TRUE)
+}
+
+axes3d(c("x-", "x-", "y-", "z"), col="gray") # axes
+title3d(main="3D Tree Visulisation-2013 Ground Truth Data",xlab = "Easting(in m)", ylab = "Northing(in m)", zlab = "Tree Height", col="red") # title
+planes3d(0, 0, -1, 0.001, col="gray", alpha=0.7) # set a terrain plane
+```
+
+
+
+
+
+
+## Evaluation:groundtruth and Lidar derived Tree points using 'Metrics' 
+
+Evaluation Metrics one of the best way for Machine Learning,now able to determine the accuracy and root means squre error between the Ground Truth Tree and derived Tree.In that case , considering 2013 Lidar and realtime gound based collected  data. we can see 2013 has high number of tree varies between CHM based trees and statiscal information.An implementation of evaluation metrics in R that are commonly used in supervised machine learning. It implements metrics for regression, time series, binary classification, classification,
+and information retrieval problems.In this case consider the result of 2013 groundbased(actual) and derived(predicted) trees count foe evaluation process.
+
+
+###Accuracy of lidar Derived Tress in 2013
+
+consider the Tress counts in 2013 from CHM and Ground data values.
+
+
+```{r}
+
+actual_no.of.Trees <- 236   #from ground
+predicted_no.of.Trees <- 220  #from raster
+rmse(actual_no.of.Trees, predicted_no.of.Trees) #Root Mean Squared Error
+rmsle(actual_no.of.Trees, predicted_no.of.Trees)   #Root Mean Squared log Error
+rrse(actual_no.of.Trees, predicted_no.of.Trees)   #Root Relative Squared Error
+ae(actual_no.of.Trees, predicted_no.of.Trees) #Absolute Error
+ape(actual_no.of.Trees, predicted_no.of.Trees) #Absolute Percent Error
+mape(actual_no.of.Trees, predicted_no.of.Trees)     # mean Absolute Percent Error
+ll(actual_no.of.Trees, predicted_no.of.Trees)   #Log Loss
+ce(actual_no.of.Trees, predicted_no.of.Trees)   #Classification Error
+smape(actual_no.of.Trees, predicted_no.of.Trees) #Symmetric Mean Absolute Percentage Error
+sse(actual_no.of.Trees, predicted_no.of.Trees)  #Sum of Squared Errors
+
+```
+
+###Understanding Metrics Validation
+The tree counts of actual (Ground truth data-2013), predicted (CHM_2013) values are 236 and 220 respectively.Based on these values i have tried to validate the machine learning with help of Metrics.each terms represents the differnt meaning and understanding of the exact facts. rmse computes the root mean squared error between two numeric vectors.rmsle adds one to both actual and predicted before taking the natural logarithm to avoid taking the natural log of zero. As a result, the function can be used if actual or predicted have zero valued elements. But this function is not appropriate if either are negative valued.rrse takes the square root of sse(actual, predicted) divided by sse(actual, mean(actual)),meaning that it provides the squared error of the predictions relative to a naive model that predicted the mean for every data point.smape is defined as two times the average of abs(actual - predicted) / (abs(actual) + abs(predicted)).Therefore, at the elementwise level, it will provide NaN only if actual and predicted are both zero. It has an upper bound of 2, when either actual or predicted are zero or when actual and predicted are opposite signs.smape is symmetric in the sense that smape(x, y) = smape(y, x).sse computes the sum of the squared differences between two numeric vectors.
+
+
+
+
+```{r}
+slices <- c(16,  0.06989744, 16,0.06779661,0.06779661, 1,0.07017544,256) 
+lbls <- c("Root Mean Squared Error","Root Mean Squared log Error","Absolute Error","Absolute Percent Error","mean Absolute Percent Error","Classification Error","Symmetric Mean Absolute Percentage Error","Sum of Squared Errors")
+pct <- round(slices/sum(slices)*300)
+lbls <- paste( pct) # add percents to labels 
+ 
+pie(slices,labels = lbls, col=rainbow(length(lbls)),
+   main="CHM Derived Trees  Quality Assessment-2013")
+legend("topleft", c("Root Mean Squared Error","Root Mean Squared log Error","Absolute Error","Absolute Percent Error","mean Absolute Percent Error","Classification Error","Symmetric Mean Absolute Percentage Error","Sum of Squared Errors"), cex = 0.5,
+   fill = rainbow(length(lbls)))
+```
+
+##Discussion 
+
+###Spatio-temporal analysis
+In this section,i have derived the Canopy Height Model(CHM) from lidar based Digital surface and Terrain model.Using CHM of 2013 and 2011 to delinated the individual tree location of each year.While we apply the same minimum tree values, got a similar tree counts. In this study, we verified the accuracy of tree height estimation based on CHMs generated tree points. The obtained tree heights were compared with field measurements and heights and counts extracted from the normalized point cloud. Although the differences between tree heights obtained using the treelist from the CHM.CHM model 2013 and 2011 are more useful and reliable, with better reproduction of the shapes of
+crowns.Unfortunately, as noted by tree count portion of this type of research (tree height estimation using LiDAR data) has been
+carried out suitable for quantitative approach and less applicable for qualitative.we can understand from the field measurement validation.Furthermore CHM based Tree points able possible  to produce the low level canopy information.The uniqueness of our study derives from the number  of trees taken into account (2013&2011 tree Counts: 220), which is relatively large compared to other studies on tree height estimation using LiDAR data.It has been proven that Airborne Laser Scanning can be successfully used to estimate tree heights even in difficult forest areas and regardless of tree species, but it should be kept in mind that the accuracies for different species can vary greatly.Methods of CHM generation based on simple raster calculation significantly underestimated the heights of trees.Heights obtained using the normalized point cloud (99th percentile) are also very strongly correlated with the heights obtained from field
+measurements. However ground truth data measurement takes much more time data collection and processing ,but CHM method provide with medium accuracy (RMSE 16%). And also very less time of processing and validation.The results obtained in this study may prove to be useful also in the case of studies on tree height estimation performed for other regions. It should be noted that if the data from the field campaign are available, it is possible to recalibrate the results of the tree height measurement based on the LiDAR data.If the field data are not available, but the ALS parameters and study area characteristics are substantially similar to our data, we can assume that it is possible to use our results to remove a systematic error or to apply a regression formula to correct this error for future work.Due to the fact that our study area is covered by the trees characteristics namely Height, location.
+
+##Conculsion
+
+The obtained results indicate that the CHM generation method influences the accuracy of tree height and count estimations. The methods for removing pits from CHMs based on simple filtration affect all the pixels in a raster and thus significantly lower the heights of all
+the trees. Only selective methods that eliminate unwanted pixels (black holes) maintain tree heights and produce smaller errors.This study raises another very important issue, concerning the use of "rLiDAR" to improve the accuracy of tree height estimation
+using LiDAR data.This study has confirmed that remote measurement methods of trees and stands-in terms of data acquisition speed, objectivity, and accuracy, as well as computational automation and falling data acquisition costs, can certainly be used for forest inventory purposes (as a support for current inventory tools), and in the future may even replace traditional forest inventories and Ecological management.
+
+   
+
+##Reference
+1.Lidar Datasets  : https://datacarpentry.org/geospatial-workshop/data/           
+2.Ground truth data:https://s3-eu-west-1.amazonaws.com/pfigshare-u-files/7907590/NEONDSFieldSiteSpatialData.zip
