@@ -694,6 +694,6 @@ using LiDAR data.This study has confirmed that remote measurement methods of tre
 
    
 
-##Reference
+##References
 1.Lidar Datasets  : https://datacarpentry.org/geospatial-workshop/data/           
-2.Ground truth data:https://s3-eu-west-1.amazonaws.com/pfigshare-u-files/7907590/NEONDSFieldSiteSpatialData.zip
+2.Ground truth data: https://s3-eu-west-1.amazonaws.com/pfigshare-u-files/7907590/NEONDSFieldSiteSpatialData.zip
