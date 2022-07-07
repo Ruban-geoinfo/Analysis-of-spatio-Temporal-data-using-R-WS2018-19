@@ -72,8 +72,8 @@ In many cases, e.g. when a RasterLayer is created from a file, it does (initiall
 
 
 ```{r}
-DSM_2013 <- raster("SJER2013_DSM.tif")
-DTM_2013 <- raster("SJER2013_DTM.tif")
+DSM_2013 <- raster("raster-datasets/SJER2013_DSM.tif")
+DTM_2013 <- raster("raster-datasets/SJER2013_DTM.tif")
 
 ```
 ####Terms
