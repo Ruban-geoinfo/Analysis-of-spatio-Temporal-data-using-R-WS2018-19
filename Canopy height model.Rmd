@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 ##Introduction
-Lidar (also called LIDAR, LiDAR, and LADAR) is a surveying method that measures distance to a target by illuminating the target with pulsed laser light and measuring the reflected pulses with a sensor. Differences in laser return times and wavelengths can then be used to make digital 3-D representations of the target.In this project,focus on the Lidar acquired raster datsets.LiDAR individual tree detection (ITD) is a interactive method for measuring forest areas at a scale that is meaningful ecologically and useful for forest managers.The main objective of this Project,to find individual tree detection based on DSM,DTM and utilize raster canopy height models from the lidar is handling of tree crowns of different sizes.However,Delination of ITD has high accuracy for trees that are visible from above but does not reliably detect trees in lower canopy strata.ITD is more accurate for upper-canopy trees is useful, there is alack of practical understanding of how ITD results might vary with changes in structure.In this scenerio, i have tried to apply LiDAR derived raster to produced high resolution low altitude trees, which useful to identify the abandoned and lower canopy.Furthermore to compare with the ITD derived from the CHM ,based on temporal data analysis.It useful for identify the trees properties monitoring, visualisation and analysis of Forest Geographical information Management.we also dicuss the ground truth data validation compare with Lidar derived information, using counts of tree. 
+ LiDAR is a surveying method that measures distance to a target by illuminating the target with pulsed laser light and measuring the reflected pulses with a sensor. Differences in laser return times and wavelengths can then be used to make digital 3-D representations of the target.In this project,focus on the Lidar acquired raster datasets. LiDAR individual tree detection (ITD) is a interactive method for measuring forest areas at a scale that is meaningful ecologically and useful for forest managers.The main objective of this Project,to find individual tree detection based on DSM,DTM and utilize raster canopy height models from the LiDAR is handling of tree crowns of different sizes.However,Delineation of ITD has high accuracy for trees that are visible from above but does not reliably detect trees in lower canopy strata.ITD is more accurate for upper-canopy trees is useful, there is alack of practical understanding of how ITD results might vary with changes in structure.In this scenario, i have tried to apply LiDAR derived raster to produced high resolution low altitude trees, which useful to identify the abandoned and lower canopy.Furthermore to compare with the ITD derived from the CHM ,based on temporal data analysis.It useful for identify the trees properties monitoring, visualisation and analysis of Forest Geographical information Management.we also dicuss the ground truth data validation compare with Lidar derived information, using counts of tree. 
 
 ##Data set(s) used:
 Remote sensing data were collected from National Ecological Observatory Network's (NEON).
@@ -220,8 +220,8 @@ The same conventional procedure followed by 2011 as same study area in differnt 
 
 ```{r}
 
-DSM_2011 <- raster("SJER2011_DSM.tif")
-DTM_2011 <- raster("SJER2011_DTM.tif")
+DSM_2011 <- raster("raster-datasets/SJER2011_DSM.tif")
+DTM_2011 <- raster("raster-datasets/SJER2011_DTM.tif")
 
 ```
 
@@ -531,7 +531,7 @@ For the validation, i have considered 2013 ground Truth statical data for measur
 ###Read the Ground Truth data
 
 ```{r}
-grounddata <-read.csv("GroundTruthData_2013.csv", header = TRUE )
+grounddata <-read.csv("GTD/GroundTruthData_2013.csv", header = TRUE )
 summary(grounddata)
 
 ```
